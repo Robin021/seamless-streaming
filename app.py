@@ -43,7 +43,6 @@ translator = Translator(
     model_name_or_card="seamlessM4T_large",
     vocoder_name_or_card="vocoder_36langs",
     device=device,
-    sample_rate=AUDIO_SAMPLE_RATE,
 )
 
 
@@ -81,6 +80,7 @@ def predict(
         tgt_lang=target_language_code,
         src_lang=source_language_code,
         ngram_filtering=True,
+        sample_rate=AUDIO_SAMPLE_RATE,
     )
     if task_name in ["S2ST", "T2ST"]:
         return (sr, wav.cpu().detach().numpy()), text_out
