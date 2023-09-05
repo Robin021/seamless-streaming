@@ -8,6 +8,9 @@ import torch
 import torchaudio
 from seamless_communication.models.inference.translator import Translator
 
+
+from m4t_app import *
+
 from transformers import pipeline
 
 p = pipeline("automatic-speech-recognition")
@@ -16,6 +19,7 @@ from pydub import AudioSegment
 import time
 from time import sleep
 
+m4t_demo()
 
 def transcribe(audio, state=""):
     # sleep(2)
