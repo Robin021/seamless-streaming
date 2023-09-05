@@ -53,4 +53,8 @@ ENV PYTHONPATH=${HOME}/app \
     GRADIO_SERVER_NAME=0.0.0.0 \
     GRADIO_THEME=huggingface \
     SYSTEM=spaces
-CMD ["python", "app.py"]
+
+# gradio instead of python for reload on file save with mountin pwd volume:
+# docker run -p 7860:7860 -v $(pwd):/home/user/app seamless_m4t_text
+CMD ["gradio", "app.py"]
+# CMD ["python", "app.py"]
