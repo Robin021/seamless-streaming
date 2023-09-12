@@ -10,6 +10,8 @@ from seamless_communication.models.inference.translator import Translator
 
 
 from m4t_app import *
+from simuleval_transcoder import *
+# from simuleval_transcoder import *
 
 from pydub import AudioSegment
 import time
@@ -19,6 +21,7 @@ from time import sleep
 
 USE_M4T = True
 
+Transcoder = SimulevalTranscoder()
 
 def translate_audio_file_segment(audio_file):
     print("translate_m4t state")
@@ -90,7 +93,9 @@ def blocks():
             )
 
         most_recent_input_audio_segment = gr.Audio(
-            label="Recent Input Audio Segment segments", format="bytes", streaming=True
+            label="Recent Input Audio Segment segments",
+            format="bytes",
+            streaming=True
         )
         # TODO: Should add combined input audio segments...
 
