@@ -1,7 +1,7 @@
 # fairseq2==0.1.0
 
 # Temp to skip
-git+https://github.com/mduppes/fairseq2.git@93420c86ba01349ee8f90d7adda439b666b50557
+# git+https://github.com/mduppes/fairseq2.git@93420c86ba01349ee8f90d7adda439b666b50557
 # git+https://github.com/facebookresearch/seamless_communication
 ./seamless_communication
 # comment this out to test fairseq1 first

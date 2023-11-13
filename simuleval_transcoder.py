@@ -31,11 +31,17 @@ from seamless_communication.models.vocoder import load_vocoder_model, Vocoder
 
 
 
-from seamless_communication.models.streaming.agents import (
-    SileroVADAgent,
-    TestTimeWaitKS2TVAD,
-    TestTimeWaitKUnityV1M4T
+# from seamless_communication.models.streaming.agents import (
+#     SileroVADAgent,
+#     TestTimeWaitKS2TVAD,
+#     TestTimeWaitKUnityV1M4T
+# )
+
+from seamless_communication.cli.streaming.agents.tt_waitk_unity_s2t_m4t import (
+    TestTimeWaitKUnityS2TM4T,
 )
+
+from seamless_communication.cli.streaming.dataloader import Fairseq2SpeechToTextDataloader
 
 ### From test_pipeline
 import math
@@ -98,11 +104,47 @@ def load_model_for_inference(
     model.eval()
     return model
 
+def load_model_fairseq2():
+    data_configs = dict(
+        dataloader="fairseq2_s2t",
+        data_file="/large_experiments/seamless/ust/abinesh/data/s2st50_manifests/50-10/simuleval/dev_mtedx_filt_50-10_debug.tsv",
+    )
+
+    model_configs = dict(
+        model_name="seamlessM4T_v2_large",
+        device="cuda:0",
+        source_segment_size=320,
+        waitk_lagging=7,
+        fixed_pre_decision_ratio=2,
+        init_target_tokens="</s> __eng__",
+        max_len_a=0,
+        max_len_b=200,
+        agent_class="seamless_communication.cli.streaming.agents.tt_waitk_unity_s2t_m4t.TestTimeWaitKUnityS2TM4T",
+        task="s2st",
+        tgt_lang="eng",
+    )
+
+    eval_configs = dict(
+        latency_metrics="StartOffset EndOffset AL",
+        output=f"{TestTimeWaitKUnityS2TM4T.__name__}-wait{model_configs['waitk_lagging']}-debug",
+    )
+
+    model = TestTimeWaitKUnityS2TM4T({**data_configs, **model_configs, **eval_configs})
+    print("model", model)
+
+    evaluate(
+        TestTimeWaitKUnityS2TM4T, {**data_configs, **model_configs, **eval_configs}
+    )
+
 class SimulevalTranscoder:
     # def __init__(self, agent, sample_rate, debug, buffer_limit):
     def __init__(self):
-        print("MDUPPES in here", SileroVADAgent, TestTimeWaitKS2TVAD)
+        # print("MDUPPES in here", SileroVADAgent, TestTimeWaitKS2TVAD)
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+
+
+        load_model_fairseq2()
 
         device = "cpu"
         print("DEVICE", device)
@@ -145,8 +187,10 @@ class SimulevalTranscoder:
 
         pipeline = TestTimeWaitKUnityV1M4T(model, args)
         system_states = pipeline.build_states()
-        print('system states')
-        print(system_states)
+        print('system states:')
+        for state in system_states:
+            print(state, vars(state))
+
         input_segment = np.empty(0, dtype=np.int16)
         segments = []
         while True:
@@ -156,6 +200,9 @@ class SimulevalTranscoder:
             output_segment = pipeline.pushpop(speech_segment, system_states)
             print('pushpop result')
             print(output_segment)
+            print('system states after pushpop:')
+            for state in system_states:
+                print(state, vars(state))
             if output_segment.finished:
                 segments.append(input_segment)
                 input_segment = np.empty(0, dtype=np.int16)
