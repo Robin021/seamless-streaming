@@ -6,101 +6,150 @@ import gradio as gr
 import numpy as np
 import torch
 import torchaudio
-from seamless_communication.models.inference.translator import Translator
 
-
-from m4t_app import *
 from simuleval_transcoder import *
-# from simuleval_transcoder import *
 
 from pydub import AudioSegment
 import time
 from time import sleep
 
-# m4t_demo()
+from seamless_communication.cli.streaming.agents.tt_waitk_unity_s2t_m4t import (
+    TestTimeWaitKUnityS2TM4T,
+)
 
-USE_M4T = True
+language_code_to_name = {
+    "cmn": "Mandarin Chinese",
+    "deu": "German",
+    "eng": "English",
+    "fra": "French",
+    "spa": "Spanish",
+}
+S2ST_TARGET_LANGUAGE_NAMES = language_code_to_name.values()
+LANGUAGE_NAME_TO_CODE = {v: k for k, v in language_code_to_name.items()}
 
-Transcoder = SimulevalTranscoder()
+DEFAULT_TARGET_LANGUAGE = "English"
 
-def translate_audio_file_segment(audio_file):
-    print("translate_m4t state")
+# TODO: Update this so it takes in target langs from input, refactor sample rate
+transcoder = SimulevalTranscoder(
+    sample_rate=48_000,
+    debug=False,
+    buffer_limit=1,
+)
 
-    return predict(
-        task_name="S2ST",
-        audio_source="microphone",
-        input_audio_mic=audio_file,
-        input_audio_file=None,
-        input_text="",
-        source_language="English",
-        target_language="Portuguese",
-    )
+def start_recording():
+    logger.debug(f"start_recording: starting transcoder")
+    transcoder.start()
 
 
-def translate_m4t_callback(
+def translate_audio_segment(audio):
+    logger.debug(f"translate_audio_segment: incoming audio")
+    sample_rate, data = audio
+
+    transcoder.process_incoming_bytes(data.tobytes(), 'eng', sample_rate)
+
+    speech_and_text_output =  transcoder.get_buffered_output()
+    if speech_and_text_output is None:
+        logger.debug("No output from transcoder.get_buffered_output()")
+        return None, None
+
+    logger.debug(f"We DID get output from the transcoder! {speech_and_text_output}")
+
+    text = None
+    speech = None
+
+    if speech_and_text_output.speech_samples:
+        speech = (speech_and_text_output.speech_samples, speech_and_text_output.speech_sample_rate)
+
+    if speech_and_text_output.text:
+        text = speech_and_text_output.text
+        if speech_and_text_output.final:
+            text += "\n"
+
+    return speech, text
+
+def streaming_input_callback(
     audio_file, translated_audio_bytes_state, translated_text_state
 ):
-    translated_wav_segment, translated_text = translate_audio_file_segment(audio_file)
-    print('translated_audio_bytes_state', translated_audio_bytes_state)
-    print('translated_wav_segment', translated_wav_segment)
+    translated_wav_segment, translated_text = translate_audio_segment(audio_file)
+    logger.debug(f'translated_audio_bytes_state {translated_audio_bytes_state}')
+    logger.debug(f'translated_wav_segment {translated_wav_segment}')
 
-    # combine translated wav into larger..
-    if type(translated_audio_bytes_state) is not tuple:
-        translated_audio_bytes_state = translated_wav_segment
-    else:
+    # TODO: accumulate each segment to provide a continuous audio segment
 
-        translated_audio_bytes_state = (translated_audio_bytes_state[0], np.append(translated_audio_bytes_state[1], translated_wav_segment[1]))
-
-    # translated_wav_segment[1]
+    if translated_wav_segment is not None:
+        sample_rate, audio_bytes = translated_wav_segment
+        audio_np_array = np.frombuffer(audio_bytes, dtype=np.float32, count=3)
 
 
-    translated_text_state += " | " + str(translated_text)
+        # combine translated wav
+        if type(translated_audio_bytes_state) is not tuple:
+            translated_audio_bytes_state = (sample_rate, audio_np_array)
+            # translated_audio_bytes_state = np.array([])
+        else:
+
+            translated_audio_bytes_state = (translated_audio_bytes_state[0], np.append(translated_audio_bytes_state[1], translated_wav_segment[1]))
+
+    if translated_text is not None:
+        translated_text_state += " | " + str(translated_text)
+
+    # most_recent_input_audio_segment = (most_recent_input_audio_segment[0], np.append(most_recent_input_audio_segment[1], audio_file[1]))
+
+    # Not necessary but for readability.
+    most_recent_input_audio_segment = audio_file
+    translated_wav_segment = translated_wav_segment
+    output_translation_combined = translated_audio_bytes_state
+    stream_output_text = translated_text_state
     return [
-        audio_file,
+        most_recent_input_audio_segment,
         translated_wav_segment,
-        translated_audio_bytes_state,
-        translated_text_state,
+        output_translation_combined,
+        stream_output_text,
         translated_audio_bytes_state,
         translated_text_state,
     ]
 
 
 def clear():
-    print("Clearing State")
+    logger.debug(f"Clearing State")
     return [bytes(), ""]
 
 
 def blocks():
     with gr.Blocks() as demo:
+
+        with gr.Row():
+            # Hook this up once supported
+            target_language = gr.Dropdown(
+                label="Target language",
+                choices=S2ST_TARGET_LANGUAGE_NAMES,
+                value=DEFAULT_TARGET_LANGUAGE,
+            )
+
         translated_audio_bytes_state = gr.State(None)
         translated_text_state = gr.State("")
 
-        # input_audio = gr.Audio(label="Input Audio", type="filepath", format="mp3")
-        if USE_M4T:
-            input_audio = gr.Audio(
-                label="Input Audio",
-                type="filepath",
-                source="microphone",
-                streaming=True,
-            )
-        else:
-            input_audio = gr.Audio(
-                label="Input Audio",
-                type="filepath",
-                format="mp3",
-                source="microphone",
-                streaming=True,
-            )
+        input_audio = gr.Audio(
+            label="Input Audio",
+            # source="microphone", # gradio==3.41.0
+            sources=["microphone"], # new gradio seems to call this less often...
+            streaming=True,
+        )
+
+        # input_audio = gr.Audio(
+        #     label="Input Audio",
+        #     type="filepath",
+        #     source="microphone",
+        #     streaming=True,
+        # )
 
         most_recent_input_audio_segment = gr.Audio(
             label="Recent Input Audio Segment segments",
-            format="bytes",
+            # format="bytes",
             streaming=True
         )
-        # TODO: Should add combined input audio segments...
 
-        stream_as_bytes_btn = gr.Button("Translate most recent recording segment")
-
+        # Force translate
+        stream_as_bytes_btn = gr.Button("Force translate most recent recording segment (ask for model output)")
         output_translation_segment = gr.Audio(
             label="Translated audio segment",
             autoplay=False,
@@ -119,7 +168,7 @@ def blocks():
         stream_output_text = gr.Textbox(label="Translated text")
 
         stream_as_bytes_btn.click(
-            translate_m4t_callback,
+            streaming_input_callback,
             [input_audio, translated_audio_bytes_state, translated_text_state],
             [
                 most_recent_input_audio_segment,
@@ -131,8 +180,21 @@ def blocks():
             ],
         )
 
-        input_audio.change(
-            translate_m4t_callback,
+        # input_audio.change(
+        #     streaming_input_callback,
+        #     [input_audio, translated_audio_bytes_state, translated_text_state],
+        #     [
+        #         most_recent_input_audio_segment,
+        #         output_translation_segment,
+        #         output_translation_combined,
+        #         stream_output_text,
+        #         translated_audio_bytes_state,
+        #         translated_text_state,
+        #     ],
+        # )
+
+        input_audio.stream(
+            streaming_input_callback,
             [input_audio, translated_audio_bytes_state, translated_text_state],
             [
                 most_recent_input_audio_segment,
@@ -143,8 +205,11 @@ def blocks():
                 translated_text_state,
             ],
         )
-        # input_audio.change(stream_bytes, [input_audio, translated_audio_bytes_state, translated_text_state], [most_recent_input_audio_segment, stream_output_text, translated_audio_bytes_state, translated_text_state])
-        # input_audio.change(lambda input_audio: recorded_audio, [input_audio], [recorded_audio])
+
+        input_audio.start_recording(
+            start_recording,
+        )
+
         input_audio.clear(
             clear, None, [translated_audio_bytes_state, translated_text_state]
         )
@@ -154,6 +219,4 @@ def blocks():
 
     demo.queue().launch()
 
-
-# if __name__ == "__main__":
 blocks()
