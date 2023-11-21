@@ -6,6 +6,9 @@ import gradio as gr
 import numpy as np
 import torch
 import torchaudio
+import sys
+from sample_wav import sample_wav
+np.set_printoptions(threshold=sys.maxsize)
 
 from simuleval_transcoder import *
 
@@ -45,6 +48,15 @@ def translate_audio_segment(audio):
     logger.debug(f"translate_audio_segment: incoming audio")
     sample_rate, data = audio
 
+    # print(sample_rate)
+    # print("--------- start \n")
+    # # print(data)
+    # def map(x):
+    #     return x
+    # print(data.tolist())
+    # print("--------- end \n")
+
+
     transcoder.process_incoming_bytes(data.tobytes(), 'eng', sample_rate)
 
     speech_and_text_output =  transcoder.get_buffered_output()
@@ -67,6 +79,9 @@ def translate_audio_segment(audio):
 
     return speech, text
 
+def dummy_ouput():
+    np.array()
+
 def streaming_input_callback(
     audio_file, translated_audio_bytes_state, translated_text_state
 ):
@@ -76,9 +91,14 @@ def streaming_input_callback(
 
     # TODO: accumulate each segment to provide a continuous audio segment
 
+    # TEMP
+    translated_wav_segment = (46_000, sample_wav())
+
     if translated_wav_segment is not None:
         sample_rate, audio_bytes = translated_wav_segment
-        audio_np_array = np.frombuffer(audio_bytes, dtype=np.float32, count=3)
+        # TODO: convert to 16 bit int
+        # audio_np_array = np.frombuffer(audio_bytes, dtype=np.float32, count=3)
+        audio_np_array = audio_bytes
 
 
         # combine translated wav
