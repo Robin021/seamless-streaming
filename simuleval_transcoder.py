@@ -325,6 +325,7 @@ class SimulevalTranscoder:
 
     def process_pipeline_loop(self):
         if self.close:
+            print("transcoder closed")
             return  # closes the thread
 
         print("processing_pipeline")

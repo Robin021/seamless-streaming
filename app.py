@@ -35,6 +35,7 @@ def build_agent(model_path, config_name=None):
 
 agent = build_agent("models", "vad_s2st_sc_24khz_main.yaml")
 transcoder = SimulevalTranscoder(
+    agent,
     sample_rate=48_000,
     debug=False,
     buffer_limit=1,
@@ -43,8 +44,8 @@ transcoder = SimulevalTranscoder(
 def start_recording():
     logger.debug(f"start_recording: starting transcoder")
     transcoder.reset_states()
-    transcoder.start()
     transcoder.close = False
+    transcoder.start()
 
 def stop_recording():
     transcoder.close = True
@@ -87,11 +88,13 @@ def get_buffered_output():
 
     return speech, text, speech_and_text_output.final
 
+from scipy.io.wavfile import write as scipy_write
 def streaming_input_callback():
     final = False
     max_wait_s = 15
     wait_s = 0
     translated_text_state = ""
+    sample_rate = 24000
     while not transcoder.close:
         translated_wav_segment, translated_text, final = get_buffered_output()
 
@@ -107,7 +110,7 @@ def streaming_input_callback():
             print("output sample rate", sample_rate)
             translated_wav_segment = sample_rate, np.array(audio_bytes)
         else:
-            translated_wav_segment = bytes()
+            translated_wav_segment = sample_rate, np.empty(0, dtype=np.int16)
 
         if translated_text is not None:
             translated_text_state += " | " + str(translated_text)
@@ -123,16 +126,23 @@ def streaming_input_callback():
 
 
 def streaming_callback_dummy():
+    i = 0
+    out_text = ""
     while not transcoder.close:
         if s.queue.empty():
-            print("empty")
-            yield bytes()
+            yield (
+                (48000, np.empty(0, dtype=np.int16)), out_text, out_text
+            )
             time.sleep(0.3)
         else:
-            print("audio")
+            i += 1
+            out_text += " | " + str(i)
+            print(out_text)
             audio = s.queue.get_nowait()
+            if i == 0:
+                print(audio[0], type(audio[1]))
             s.queue.task_done()
-            yield audio
+            yield audio, out_text, out_text
 
 def clear():
     logger.debug(f"Clearing State")
@@ -175,21 +185,28 @@ def blocks():
         ).then(
             start_recording
         ).then(
-            # streaming_callback_dummy,  # TODO: autoplay works fine with streaming_callback_dummy
-            # None,
-            # output_translation_segment
+            # TODO: streaming speech autoplay works fine with streaming_callback_dummy,
+            # but speech output from streaming_input_callback has a huge delay
+            # when comparing print/debugging logs vs. output speech
+            # TODO: text output works fine with one output, but is not
+            # updating when output is both text + speech
+            # streaming_callback_dummy,
             streaming_input_callback,
             None,
             [
                 output_translation_segment,
                 stream_output_text,
                 translated_text_state,
-            ],
+            ]
         )
         input_audio.stop_recording(
             stop_recording
         )
         input_audio.stream(
+            # TODO: *only when streaming speech output* about half the time 
+            # there is some race condition in gradio where process_incoming_bytes
+            # stops getting called once the first speech chunk is yield-ed 
+            # in streaming_input_callback (or streaming_callback_dummy)
             process_incoming_bytes, [input_audio], None
         )
 
