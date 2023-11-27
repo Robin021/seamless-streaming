@@ -1,24 +1,15 @@
 from __future__ import annotations
 
-import os
-
 import gradio as gr
 import numpy as np
-import torch
-import torchaudio
-import sys
-from sample_wav import sample_wav
-np.set_printoptions(threshold=sys.maxsize)
 
-from simuleval_transcoder import *
+import asyncio
+from simuleval_transcoder import SimulevalTranscoder, logger
 
-from pydub import AudioSegment
 import time
-from time import sleep
+from simuleval.utils.agent import build_system_from_dir
+import torch
 
-from seamless_communication.cli.streaming.agents.tt_waitk_unity_s2t_m4t import (
-    TestTimeWaitKUnityS2TM4T,
-)
 
 language_code_to_name = {
     "cmn": "Mandarin Chinese",
@@ -32,7 +23,17 @@ LANGUAGE_NAME_TO_CODE = {v: k for k, v in language_code_to_name.items()}
 
 DEFAULT_TARGET_LANGUAGE = "English"
 
-# TODO: Update this so it takes in target langs from input, refactor sample rate
+
+def build_agent(model_path, config_name=None):
+    agent = build_system_from_dir(
+        model_path, config_name=config_name,
+    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    agent.to(device, fp16=True)
+
+    return agent
+
+agent = build_agent("models", "vad_s2st_sc_24khz_main.yaml")
 transcoder = SimulevalTranscoder(
     sample_rate=48_000,
     debug=False,
@@ -41,93 +42,97 @@ transcoder = SimulevalTranscoder(
 
 def start_recording():
     logger.debug(f"start_recording: starting transcoder")
+    transcoder.reset_states()
     transcoder.start()
+    transcoder.close = False
+
+def stop_recording():
+    transcoder.close = True
+
+class MyState:
+    def __init__(self):
+        self.queue = asyncio.Queue()
+        self.close = False
 
 
-def translate_audio_segment(audio):
-    logger.debug(f"translate_audio_segment: incoming audio")
+s = MyState()
+
+def process_incoming_bytes(audio):
+    logger.debug(f"process_bytes: incoming audio")
     sample_rate, data = audio
-
-    # print(sample_rate)
-    # print("--------- start \n")
-    # # print(data)
-    # def map(x):
-    #     return x
-    # print(data.tolist())
-    # print("--------- end \n")
-
-
     transcoder.process_incoming_bytes(data.tobytes(), 'eng', sample_rate)
+    s.queue.put_nowait(audio)
+
+
+
+def get_buffered_output():
 
     speech_and_text_output =  transcoder.get_buffered_output()
     if speech_and_text_output is None:
         logger.debug("No output from transcoder.get_buffered_output()")
-        return None, None
+        return None, None, None
 
-    logger.debug(f"We DID get output from the transcoder! {speech_and_text_output}")
+    logger.debug(f"We DID get output from the transcoder!")
 
     text = None
     speech = None
 
     if speech_and_text_output.speech_samples:
-        speech = (speech_and_text_output.speech_samples, speech_and_text_output.speech_sample_rate)
+        speech = (speech_and_text_output.speech_sample_rate, speech_and_text_output.speech_samples)
 
     if speech_and_text_output.text:
         text = speech_and_text_output.text
         if speech_and_text_output.final:
             text += "\n"
 
-    return speech, text
+    return speech, text, speech_and_text_output.final
 
-def dummy_ouput():
-    np.array()
+def streaming_input_callback():
+    final = False
+    max_wait_s = 15
+    wait_s = 0
+    translated_text_state = ""
+    while not transcoder.close:
+        translated_wav_segment, translated_text, final = get_buffered_output()
 
-def streaming_input_callback(
-    audio_file, translated_audio_bytes_state, translated_text_state
-):
-    translated_wav_segment, translated_text = translate_audio_segment(audio_file)
-    logger.debug(f'translated_audio_bytes_state {translated_audio_bytes_state}')
-    logger.debug(f'translated_wav_segment {translated_wav_segment}')
-
-    # TODO: accumulate each segment to provide a continuous audio segment
-
-    # TEMP
-    translated_wav_segment = (46_000, sample_wav())
-
-    if translated_wav_segment is not None:
-        sample_rate, audio_bytes = translated_wav_segment
-        # TODO: convert to 16 bit int
-        # audio_np_array = np.frombuffer(audio_bytes, dtype=np.float32, count=3)
-        audio_np_array = audio_bytes
-
-
-        # combine translated wav
-        if type(translated_audio_bytes_state) is not tuple:
-            translated_audio_bytes_state = (sample_rate, audio_np_array)
-            # translated_audio_bytes_state = np.array([])
+        if translated_wav_segment is None and translated_text is None:
+            time.sleep(0.3)
+            wait_s += 0.3
+            if wait_s >= max_wait_s:
+                transcoder.close = True
+            continue
+        wait_s = 0
+        if translated_wav_segment is not None:
+            sample_rate, audio_bytes = translated_wav_segment
+            print("output sample rate", sample_rate)
+            translated_wav_segment = sample_rate, np.array(audio_bytes)
         else:
+            translated_wav_segment = bytes()
 
-            translated_audio_bytes_state = (translated_audio_bytes_state[0], np.append(translated_audio_bytes_state[1], translated_wav_segment[1]))
+        if translated_text is not None:
+            translated_text_state += " | " + str(translated_text)
 
-    if translated_text is not None:
-        translated_text_state += " | " + str(translated_text)
+        stream_output_text = translated_text_state
+        if translated_text is not None:
+            print("translated:", translated_text_state)
+        yield [
+            translated_wav_segment,
+            stream_output_text,
+            translated_text_state,
+        ]
 
-    # most_recent_input_audio_segment = (most_recent_input_audio_segment[0], np.append(most_recent_input_audio_segment[1], audio_file[1]))
 
-    # Not necessary but for readability.
-    most_recent_input_audio_segment = audio_file
-    translated_wav_segment = translated_wav_segment
-    output_translation_combined = translated_audio_bytes_state
-    stream_output_text = translated_text_state
-    return [
-        most_recent_input_audio_segment,
-        translated_wav_segment,
-        output_translation_combined,
-        stream_output_text,
-        translated_audio_bytes_state,
-        translated_text_state,
-    ]
-
+def streaming_callback_dummy():
+    while not transcoder.close:
+        if s.queue.empty():
+            print("empty")
+            yield bytes()
+            time.sleep(0.3)
+        else:
+            print("audio")
+            audio = s.queue.get_nowait()
+            s.queue.task_done()
+            yield audio
 
 def clear():
     logger.debug(f"Clearing State")
@@ -138,105 +143,56 @@ def blocks():
     with gr.Blocks() as demo:
 
         with gr.Row():
-            # Hook this up once supported
+            # TODO: add target language switching
             target_language = gr.Dropdown(
                 label="Target language",
                 choices=S2ST_TARGET_LANGUAGE_NAMES,
                 value=DEFAULT_TARGET_LANGUAGE,
             )
 
-        translated_audio_bytes_state = gr.State(None)
         translated_text_state = gr.State("")
 
         input_audio = gr.Audio(
             label="Input Audio",
-            # source="microphone", # gradio==3.41.0
-            sources=["microphone"], # new gradio seems to call this less often...
+            sources=["microphone"],
             streaming=True,
         )
 
-        # input_audio = gr.Audio(
-        #     label="Input Audio",
-        #     type="filepath",
-        #     source="microphone",
-        #     streaming=True,
-        # )
-
-        most_recent_input_audio_segment = gr.Audio(
-            label="Recent Input Audio Segment segments",
-            # format="bytes",
-            streaming=True
-        )
-
-        # Force translate
-        stream_as_bytes_btn = gr.Button("Force translate most recent recording segment (ask for model output)")
         output_translation_segment = gr.Audio(
             label="Translated audio segment",
-            autoplay=False,
+            autoplay=True,
             streaming=True,
-            type="numpy",
         )
 
-        output_translation_combined = gr.Audio(
-            label="Translated audio combined",
-            autoplay=False,
-            streaming=True,
-            type="numpy",
-        )
-
-        # Could add output text segment
+        # Output text segment
         stream_output_text = gr.Textbox(label="Translated text")
 
-        stream_as_bytes_btn.click(
-            streaming_input_callback,
-            [input_audio, translated_audio_bytes_state, translated_text_state],
-            [
-                most_recent_input_audio_segment,
-                output_translation_segment,
-                output_translation_combined,
-                stream_output_text,
-                translated_audio_bytes_state,
-                translated_text_state,
-            ],
-        )
-
-        # input_audio.change(
-        #     streaming_input_callback,
-        #     [input_audio, translated_audio_bytes_state, translated_text_state],
-        #     [
-        #         most_recent_input_audio_segment,
-        #         output_translation_segment,
-        #         output_translation_combined,
-        #         stream_output_text,
-        #         translated_audio_bytes_state,
-        #         translated_text_state,
-        #     ],
-        # )
-
-        input_audio.stream(
-            streaming_input_callback,
-            [input_audio, translated_audio_bytes_state, translated_text_state],
-            [
-                most_recent_input_audio_segment,
-                output_translation_segment,
-                output_translation_combined,
-                stream_output_text,
-                translated_audio_bytes_state,
-                translated_text_state,
-            ],
-        )
-
-        input_audio.start_recording(
-            start_recording,
-        )
-
         input_audio.clear(
-            clear, None, [translated_audio_bytes_state, translated_text_state]
+            clear, None, [output_translation_segment, translated_text_state]
         )
         input_audio.start_recording(
-            clear, None, [translated_audio_bytes_state, translated_text_state]
+            clear, None, [output_translation_segment, translated_text_state]
+        ).then(
+            start_recording
+        ).then(
+            # streaming_callback_dummy,  # TODO: autoplay works fine with streaming_callback_dummy
+            # None,
+            # output_translation_segment
+            streaming_input_callback,
+            None,
+            [
+                output_translation_segment,
+                stream_output_text,
+                translated_text_state,
+            ],
+        )
+        input_audio.stop_recording(
+            stop_recording
+        )
+        input_audio.stream(
+            process_incoming_bytes, [input_audio], None
         )
 
-    demo.queue().launch()
+    demo.launch(server_port=6010)
 
 blocks()

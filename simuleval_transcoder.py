@@ -20,13 +20,6 @@ import time
 import random
 import colorlog
 
-# Sanity check that pipeline is loadable
-from seamless_communication.cli.streaming.agents.tt_waitk_unity_s2t_m4t import (
-    # TestTimeWaitKUnityS2TM4T,
-    TestTimeWaitKUnityS2TM4TVAD
-)
-
-from simuleval.utils.agent import build_system_args
 
 MODEL_SAMPLE_RATE = 16_000
 
@@ -48,35 +41,6 @@ handler.setFormatter(formatter)
 logger.addHandler(handler)
 logger.setLevel(logging.DEBUG)
 
-
-# TODO: Integrate this better so target lang and others can be changed. Also currently dependent on devserver internals
-def build_agent():
-    config = {
-        'dataloader': 'fairseq2_s2t',
-        'data_file': '/large_experiments/seamless/ust/abinesh/data/s2st50_manifests/50-10/simuleval/dev_mtedx_filt_50-10_debug.tsv',
-        'model_name': 'seamlessM4T_v2_large',
-        'device': 'cuda:0',
-        'source_segment_size': 320,
-        'waitk_lagging': 7,
-        'fixed_pre_decision_ratio': 2,
-        'init_target_tokens': '</s> __eng__',
-        'max_len_a': 0,
-        'max_len_b': 200,
-        'agent_class': 'seamless_communication.cli.streaming.agents.tt_waitk_unity_s2t_m4t.TestTimeWaitKUnityS2TM4TVAD',
-        'task': 's2st',
-        'tgt_lang': 'eng',
-        'latency_metrics': 'StartOffset EndOffset AL',
-        'output': 'TestTimeWaitKUnityS2TM4TVAD-wait7-debug'
-    }
-
-    agent , _ = build_system_args(config)
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # agent.to(device, fp16=True)
-    logger.info(
-        f"Successfully built simuleval agent"
-    )
-
-    return agent
 
 class SpeechAndTextOutput:
     def __init__(
@@ -150,7 +114,7 @@ class OutputSegments:
                 for segment in segment_list:
                     speech_out += segment.content
                 output.speech_samples = speech_out
-                output.speech_sample_rate = MODEL_SAMPLE_RATE
+                output.speech_sample_rate = segment.sample_rate
             elif isinstance(segment_list[0], EmptySegment):
                 continue
             else:
@@ -212,8 +176,9 @@ def convert_waveform(
     return waveform, sample_rate
 
 class SimulevalTranscoder:
-    def __init__(self, sample_rate, debug, buffer_limit):
-        self.agent = build_agent()
+    def __init__(self, agent, sample_rate, debug, buffer_limit):
+        # agent is stateless
+        self.agent = agent
         self.input_queue = asyncio.Queue()
         self.output_queue = asyncio.Queue()
         self.states = self.agent.build_states()
@@ -289,6 +254,7 @@ class SimulevalTranscoder:
         )
         # # segment is array([0, 0, 0, ..., 0, 0, 0], dtype=int16)
         self.input_queue.put_nowait(segment)
+        print("process_incoming: put input_queue")
 
     def get_input_segment(self):
         if self.input_queue.empty():
@@ -340,10 +306,11 @@ class SimulevalTranscoder:
                 self.first_input_ts = self.get_states_root().first_input_ts
 
             if not output_segment.is_empty:
+                print("PUT IN OUTPUT QUEUE")
                 self.output_queue.put_nowait(output_segment)
 
             if output_segment.finished:
-                self.debug_log("OUTPUT SEGMENT IS FINISHED. Resetting states.")
+                print("OUTPUT SEGMENT IS FINISHED. Resetting states.")
 
                 self.reset_states()
 
@@ -360,17 +327,19 @@ class SimulevalTranscoder:
         if self.close:
             return  # closes the thread
 
-        self.debug_log("processing_pipeline")
+        print("processing_pipeline")
         while not self.close:
             input_segment = self.get_input_segment()
             if input_segment is None:
-                # if self.get_states_root().is_fresh_state:  # TODO: this is hacky
-                #     time.sleep(0.3)
-                # else:
-                time.sleep(0.03)
+                if self.get_states_root().is_fresh_state:  # TODO: this is hacky
+                    time.sleep(0.3)
+                    print("loop: input_queue empty")
+                else:
+                    time.sleep(0.03)
                 continue
+            print("loop: got input_segment")
             self.process_pipeline_impl(input_segment)
-        self.debug_log("finished processing_pipeline")
+        print("finished processing_pipeline")
 
     def process_pipeline_once(self):
         if self.close:
@@ -392,7 +361,7 @@ class SimulevalTranscoder:
         return output_chunk
 
     def start(self):
-        self.debug_log("starting transcoder in a thread")
+        print("starting transcoder in a thread")
         threading.Thread(target=self.process_pipeline_loop).start()
 
     def first_translation_time(self):
@@ -400,7 +369,7 @@ class SimulevalTranscoder:
 
     def get_buffered_output(self) -> SpeechAndTextOutput:
         now = time.time() * 1000
-        self.debug_log(f"get_buffered_output queue size: {self.output_queue.qsize()}")
+        print(f"get_buffered_output queue size: {self.output_queue.qsize()}")
         while not self.output_queue.empty():
             tmp_out = self.get_output_segment()
             if tmp_out and tmp_out.compute_length(self.g2p) > 0:
