@@ -49,10 +49,10 @@ export const SUPPORTED_OUTPUT_MODES: Array<{
   value: (typeof SUPPORTED_OUTPUT_MODE_VALUES)[number];
   label: string;
 }> = [
-  {value: 's2s&t', label: 'Text & Speech'},
-  {value: 's2t', label: 'Text'},
-  {value: 's2s', label: 'Speech'},
-];
+    { value: 's2s&t', label: 'Text & Speech' },
+    { value: 's2t', label: 'Text' },
+    { value: 's2s', label: 'Speech' },
+  ];
 
 export const SUPPORTED_INPUT_SOURCE_VALUES = [
   'userMedia',
@@ -66,9 +66,9 @@ export const SUPPORTED_INPUT_SOURCES: Array<{
   value: SupportedInputSource;
   label: string;
 }> = [
-  {value: 'userMedia', label: 'Microphone'},
-  {value: 'displayMedia', label: 'Browser Tab'},
-];
+    { value: 'userMedia', label: 'Microphone' },
+    { value: 'displayMedia', label: 'Browser Tab' },
+  ];
 
 export type StartStreamEventConfig = {
   event: 'config';
@@ -100,7 +100,7 @@ export type ServerLockObject = {
 export type ServerState = ServerStateItem & {
   agentsCapabilities: Array<AgentCapabilities>;
   statusByRoom: {
-    [key: string]: {activeConnections: number; activeTranscoders: number};
+    [key: string]: { activeConnections: number; activeTranscoders: number };
   };
   totalActiveConnections: number;
   totalActiveTranscoders: number;

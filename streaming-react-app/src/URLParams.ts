@@ -1,5 +1,5 @@
-import {getBooleanParamFlag, getStringParamFlag} from './getParamFlag';
-import {URLParamsObject} from './types/URLParamsTypes';
+import { getBooleanParamFlag, getStringParamFlag } from './getParamFlag';
+import { URLParamsObject } from './types/URLParamsTypes';
 
 /**
  * These are the URL parameters you can provide to the app to change its behavior.

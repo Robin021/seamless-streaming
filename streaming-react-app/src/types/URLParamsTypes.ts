@@ -7,10 +7,10 @@ export type URLParamsObject = {
   serverURL: string | null;
   skipARIntro: boolean;
   ARTranscriptionType:
-    | 'single_block'
-    | 'lines'
-    | 'lines_with_background'
-    | string;
+  | 'single_block'
+  | 'lines'
+  | 'lines_with_background'
+  | string;
 };
 
 export type URLParamNames = keyof URLParamsObject;

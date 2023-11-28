@@ -64,19 +64,19 @@ const AUDIO_STREAM_DEFAULTS: {
   [key in SupportedInputSource]: BrowserAudioStreamConfig;
 } = {
   userMedia: {
-    noiseSuppression: true,
     echoCancellation: false,
+    noiseSuppression: true,
   },
   displayMedia: {
-    noiseSuppression: false,
     echoCancellation: false,
+    noiseSuppression: false,
   },
 };
 
 async function requestUserMediaAudioStream(
   config: BrowserAudioStreamConfig = {
-    noiseSuppression: true,
     echoCancellation: false,
+    noiseSuppression: true,
   },
 ) {
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -91,8 +91,8 @@ async function requestUserMediaAudioStream(
 
 async function requestDisplayMediaAudioStream(
   config: BrowserAudioStreamConfig = {
-    noiseSuppression: false,
     echoCancellation: false,
+    noiseSuppression: false,
   },
 ) {
   const stream = await navigator.mediaDevices.getDisplayMedia({
@@ -130,7 +130,9 @@ export const TYPING_ANIMATION_DELAY_MS = 6;
 export default function StreamingInterface() {
   const urlParams = getURLParams();
   const debugParam = urlParams.debug;
-  const animateTextDisplay = urlParams.animateTextDisplay;
+  const [animateTextDisplay, setAnimateTextDisplay] = useState<boolean>(
+    urlParams.animateTextDisplay,
+  );
 
   const socketObject = useSocket();
   const {socket, clientID} = socketObject;
@@ -163,6 +165,9 @@ export default function StreamingInterface() {
   const [inputSource, setInputSource] =
     useState<SupportedInputSource>('userMedia');
   const [enableNoiseSuppression, setEnableNoiseSuppression] = useState<
+    boolean | null
+  >(null);
+  const [enableEchoCancellation, setEnableEchoCancellation] = useState<
     boolean | null
   >(null);
 
@@ -358,14 +363,18 @@ export default function StreamingInterface() {
           noiseSuppression:
             enableNoiseSuppression ??
             AUDIO_STREAM_DEFAULTS['userMedia'].noiseSuppression,
-          echoCancellation: false,
+          echoCancellation:
+            enableEchoCancellation ??
+            AUDIO_STREAM_DEFAULTS['userMedia'].echoCancellation,
         });
       } else if (inputSource === 'displayMedia') {
         stream = await requestDisplayMediaAudioStream({
           noiseSuppression:
             enableNoiseSuppression ??
             AUDIO_STREAM_DEFAULTS['displayMedia'].noiseSuppression,
-          echoCancellation: false,
+          echoCancellation:
+            enableEchoCancellation ??
+            AUDIO_STREAM_DEFAULTS['displayMedia'].echoCancellation,
         });
       } else {
         throw new Error(`Unsupported input source requested: ${inputSource}`);
@@ -733,6 +742,10 @@ export default function StreamingInterface() {
       startStreaming={startStreaming}
       stopStreaming={stopStreaming}
       debugParam={debugParam}
+      onARHidden={() => {
+        setAnimateTextDisplay(urlParams.animateTextDisplay);
+      }}
+      onARVisible={() => setAnimateTextDisplay(false)}
     />
   );
 
@@ -979,6 +992,23 @@ export default function StreamingInterface() {
                             />
                           }
                           label="Noise Suppression (Browser)"
+                        />
+                        <FormControlLabel
+                          control={
+                            <Checkbox
+                              checked={
+                                enableEchoCancellation ??
+                                AUDIO_STREAM_DEFAULTS[inputSource]
+                                  .echoCancellation
+                              }
+                              onChange={(
+                                event: React.ChangeEvent<HTMLInputElement>,
+                              ) =>
+                                setEnableEchoCancellation(event.target.checked)
+                              }
+                            />
+                          }
+                          label="Echo Cancellation (Browser)"
                         />
                         <FormControlLabel
                           control={
