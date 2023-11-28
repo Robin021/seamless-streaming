@@ -1,0 +1,13 @@
+{
+  "name": "seamless_server",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npm run start:debug -- --reload",
+    "start": "uvicorn app_pubsub:app --host 0.0.0.0",
+    "start:debug": "npm run start -- --log-level debug",
+    "start:trace": "npm run start -- --log-level trace",
+    "start:prod": "npm run build:client && npm run start",
+    "build:client": "cd ../streaming-react-app/ && npm run build"
+  },
+  "author": ""
+}

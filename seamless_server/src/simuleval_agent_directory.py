@@ -123,7 +123,7 @@ class SimulevalAgentDirectory:
                 self.add_agent(agent_info)
         else:
             s2s_m4t_expr_agent = self.build_agent_if_available(
-                SimulevalAgentDirectory.s2s_m4t_emma_agent,
+                SimulevalAgentDirectory.s2s_m4t_expr_emma_agent,
                 config_name="vad_s2st_sc_24khz_main.yaml",
             )
 
@@ -131,12 +131,12 @@ class SimulevalAgentDirectory:
                 self.add_agent(
                     AgentWithInfo(
                         agent=s2s_m4t_expr_agent,
-                        name=SimulevalAgentDirectory.s2s_m4t_emma_agent,
+                        name=SimulevalAgentDirectory.s2s_m4t_expr_emma_agent,
                         modalities=["s2t", "s2s"],
                         source_langs=M4T_P0_LANGS,
                         target_langs=["eng", "spa", "fra", "deu", "ita", "cmn"],
                         dynamic_params=["expressive"],
-                        description="ES-EN expressive model that supports S2S and S2T",
+                        description="multilingual expressive model that supports S2S and S2T",
                     )
                 )
 
