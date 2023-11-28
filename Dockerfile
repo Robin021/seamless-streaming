@@ -71,6 +71,7 @@ COPY --from=frontend /app/dist ./streaming-react-app/dist
 WORKDIR $HOME/app/seamless_server
 # temporary hack to link SeamlessStreaming models
 ARG HF_TOKEN
+ENV HF_TOKEN=$HF_TOKEN
 RUN huggingface-cli download meta-private/SeamlessStreaming seamless_streaming_unity.pt spm_char_lang38_tc.model seamless_streaming_monotonic_decoder.pt --local-dir ./models/ && \
     huggingface-cli download meta-private/SeamlessExpressive pretssel_melhifigan_wm-final.pt  --local-dir ./models/ 
 USER root
