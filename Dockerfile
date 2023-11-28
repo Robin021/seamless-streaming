@@ -84,6 +84,7 @@ RUN mkdir -p /large_experiments/seamless/ust/krs/fairseq2_checkpoints/ && \
     ln -s $(readlink -f models/pretssel_melhifigan_wm-final.pt) /large_experiments/seamless/workstream/expressivity/oss/checkpoints/pretssel_melhifigan_wm-final.pt && \
     ln -s $(readlink -f models/spm_char_lang38_tc.model) /checkpoint/krs/unity2/
 
+RUN ln -s /usr/lib/x86_64-linux-gnu/libsox.so.3 /usr/lib/x86_64-linux-gnu/libsox.so
 USER user
 CMD [ "uvicorn", "app_pubsub:app", "--host", "0.0.0.0", "--port", "7860" ]
 
