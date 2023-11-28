@@ -1,5 +1,5 @@
 ---
-title: Seamless M4T
+title: Seamless Streaming Backend/Frontend
 emoji: 📞
 colorFrom: blue
 colorTo: yellow

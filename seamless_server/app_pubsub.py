@@ -12,6 +12,10 @@ import sys
 import time
 import random
 import string
+from starlette.applications import Starlette
+from starlette.routing import Mount, Route
+from starlette.staticfiles import StaticFiles
+
 
 from src.room import Room, Member
 from src.simuleval_agent_directory import NoAvailableAgentException
@@ -86,7 +90,15 @@ sio = socketio.AsyncServer(
     # engineio_logger=logger,
 )
 # sio.logger.setLevel(logging.DEBUG)
-app = socketio.ASGIApp(sio, static_files=static_files)
+socketio_app = socketio.ASGIApp(sio)
+
+app_routes = [
+    Mount("/ws", app=socketio_app),  # Mount Socket.IO server under /app
+    Mount(
+        "/", app=StaticFiles(directory=CLIENT_BUILD_PATH, html=True)
+    ),  # Serve static files from root
+]
+app = Starlette(debug=True, routes=app_routes)
 
 # rooms is indexed by room_id
 rooms: Dict[str, Room] = {}
