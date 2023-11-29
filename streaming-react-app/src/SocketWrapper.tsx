@@ -18,8 +18,7 @@ export default function SocketWrapper({children}) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
   // Default to true:
-  const [willAttemptReconnect, setWillAttemptReconnect] =
-    useState<boolean>(true);
+  const [willAttemptReconnect] = useState<boolean>(true);
   const serverIDRef = useRef<string | null>(null);
 
   const setAppResetKey = useContext(AppResetKeyContext);

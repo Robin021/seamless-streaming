@@ -125,8 +125,6 @@ export type DynamicConfig = {
   // targetLanguage: a 3-letter string representing the desired output language.
   // Supported languages are provided by the agent capabilities config
   targetLanguage: string;
-
-  expressive: boolean | null;
 };
 
 export type PartialDynamicConfig = Partial<DynamicConfig>;

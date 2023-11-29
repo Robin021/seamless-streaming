@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --host --strictPort",
-    "build": "vite build",
+    "build": "tsc && vite build",
     "preview": "vite preview",
     "clean:node-modules": "rm -rf node_modules/",
     "ts-check": "tsc --noEmit",
