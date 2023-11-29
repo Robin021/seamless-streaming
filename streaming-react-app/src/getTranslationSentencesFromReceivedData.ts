@@ -6,7 +6,6 @@ export default function getTranslationSentencesFromReceivedData(
   return receivedData
     .reduce(
       (acc, data) => {
-        // TODO: Add special handling if the payload starts/ends with an apostrophe?
         const newAcc = [
           ...acc.slice(0, -1),
           acc[acc.length - 1].trim() + ' ' + data.payload,

@@ -100,8 +100,7 @@ export default function createBufferedSpeechPlayer({
     );
 
     source.connect(gainNode);
-    // the gain node is already connected to audioContext.destination
-    // source.connect(audioContext.destination);
+
     const startTime = new Date().getTime();
     source.start();
     currentPlayingBufferSource = source;
@@ -117,9 +116,6 @@ export default function createBufferedSpeechPlayer({
       const endTime = new Date().getTime();
       debug()?.playedAudio(startTime, endTime, buffer);
       currentPlayingBufferSource = null;
-
-      // TODO: should we disconnect source from gain node here?
-      // source.disconnect(gainNode);
 
       // We don't set isPlaying = false here because we are attempting to continue playing. It will get set to false if there are no more buffers to play
       playNextBuffer();

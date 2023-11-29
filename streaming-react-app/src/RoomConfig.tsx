@@ -74,7 +74,6 @@ export default function RoomConfig({
       const lockServerValidated: string | null =
         lockServer && roles['speaker'] ? lockServerName : null;
 
-      // TODO: Show error state if roomID isn't valid
       setJoinInProgress(true);
 
       const configObject: JoinRoomConfig = {

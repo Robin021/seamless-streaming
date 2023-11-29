@@ -98,7 +98,6 @@ async function requestDisplayMediaAudioStream(
 ) {
   const stream = await navigator.mediaDevices.getDisplayMedia({
     audio: {...config, channelCount: 1},
-    // selfBrowserSurface: false, // don't allow the user to select the current tab as the source
   });
   console.debug(
     '[requestDisplayMediaAudioStream] stream created with settings:',
@@ -183,8 +182,6 @@ export default function StreamingInterface() {
   );
 
   const [receivedData, setReceivedData] = useState<Array<ServerTextData>>([]);
-  // const [translationSentencesAnimated, setTranslationSentencesAnimated] =
-  //   useState<TranslationSentences>([]);
   const [
     translationSentencesAnimatedIndex,
     setTranslationSentencesAnimatedIndex,
@@ -261,7 +258,6 @@ export default function StreamingInterface() {
         if (prevAgent?.name !== newAgent?.name) {
           setTargetLang(newAgent?.targetLangs[0] ?? null);
           setEnableExpressive(null);
-          // setOutputMode(newAgent.modalities[0]);
         }
         return newAgent;
       });
@@ -310,7 +306,6 @@ export default function StreamingInterface() {
         event: 'config',
         rate: sampleRate,
         model_name: modelName,
-        // source_language: inputLang,
         debug: serverDebugFlag,
         // synchronous processing isn't implemented on the v2 pubsub server, so hardcode this to true
         async_processing: true,
@@ -390,11 +385,12 @@ export default function StreamingInterface() {
     const mediaStreamSource = audioContext.createMediaStreamSource(stream);
     setInputStreamSource(mediaStreamSource);
     /**
-     * NOTE: This currently uses a deprecated way of processing the audio (createScriptProcessor).
+     * NOTE: This currently uses a deprecated way of processing the audio (createScriptProcessor), but
+     * which is easy and convenient for our purposes.
      *
      * Documentation for the deprecated way of doing it is here: https://developer.mozilla.org/en-US/docs/Web/API/BaseAudioContext/createScriptProcessor
      *
-     * This should be migrated to something like this SO answer: https://stackoverflow.com/a/65448287
+     * In an ideal world this would be migrated to something like this SO answer: https://stackoverflow.com/a/65448287
      */
     const scriptProcessor = audioContext.createScriptProcessor(16384, 1, 1);
     setScriptNodeProcessor(scriptProcessor);
@@ -408,7 +404,6 @@ export default function StreamingInterface() {
         console.warn('[onaudioprocess] socket is null in onaudioprocess');
         return;
       }
-      // console.debug('[onaudioprocess] event', event);
 
       if (mutedRef.current) {
         // We still want to send audio to the server when we're muted to ensure we
@@ -475,10 +470,6 @@ export default function StreamingInterface() {
       inputStreamSource.disconnect(scriptNodeProcessor);
       scriptNodeProcessor.disconnect(audioContext.destination);
 
-      // From: https://stackoverflow.com/questions/65447236/scriptnode-onaudioprocess-is-deprecated-any-alternative
-      // do we also need this??
-      // recorder?.stop();
-
       // Release the mic input so we stop showing the red recording icon in the browser
       inputStream?.getTracks().forEach((track) => track.stop());
     }
@@ -518,7 +509,6 @@ export default function StreamingInterface() {
     }
 
     const onRoomStateUpdate = (roomState: RoomState) => {
-      // console.log('[event: room_state_update]', roomState);
       setRoomState(roomState);
     };
 
@@ -632,11 +622,9 @@ export default function StreamingInterface() {
   useEffect(() => {
     const onScroll = () => {
       if (isScrolledToDocumentBottom(SCROLLED_TO_BOTTOM_THRESHOLD_PX)) {
-        // console.debug('scrolled to bottom!');
         isScrolledToBottomRef.current = true;
         return;
       }
-      // console.debug('NOT scrolled to bottom!');
       isScrolledToBottomRef.current = false;
       return;
     };
@@ -712,7 +700,6 @@ export default function StreamingInterface() {
         valueLabelDisplay="auto"
         value={gain}
         onChange={(_event: Event, newValue: number | number[]) => {
-          // console.log({event, newValue});
           if (typeof newValue === 'number') {
             const scaledGain = getGainScaledValue(newValue);
             // We want the actual gain node to use the scaled value
@@ -1002,7 +989,7 @@ export default function StreamingInterface() {
                           }
                           label="Noise Suppression (Browser)"
                         />
-                        <FormControlLabel
+                                                <FormControlLabel
                           control={
                             <Checkbox
                               checked={

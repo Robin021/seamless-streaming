@@ -54,7 +54,3 @@ export function getSequentialRoomIDForTestingGenerator(): () => string {
     return result;
   };
 }
-
-// const generator = getSequentialRoomIDForTestingGenerator();
-
-// Array.from({length: 200}, () => console.log(generator()));

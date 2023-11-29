@@ -622,7 +622,6 @@ async def configure_stream(sid, config):
     await emit_server_state_update()
 
     return {"status": "ok", "message": "server_ready"}
-    # await sio.emit("server_ready", None, to=sid)
 
 
 # The config here is a partial config, meaning it may not contain all the config values -- only the ones the user
@@ -636,14 +635,10 @@ async def set_dynamic_config(
 ):
     session_data = await get_session_data(sid)
 
-    # client_id = None
     member = None
-    # room = None
 
     if session_data:
-        # client_id = session_data.get("client_id")
         member = session_data.get("member_object")
-        # room = session_data.get("room_object")
 
     if member:
         new_dynamic_config = {
@@ -661,8 +656,6 @@ async def set_dynamic_config(
 @sio.event
 @catch_and_log_exceptions_for_sio_event_handlers
 async def incoming_audio(sid, blob):
-    # logger.info(f"[event: incoming_audio] {sid}")
-
     session_data = await get_session_data(sid)
 
     client_id = None
@@ -721,9 +714,11 @@ async def incoming_audio(sid, blob):
         blob, dynamic_config=member.transcoder_dynamic_config
     )
 
-    # TODO: What we have below is NOT a good way to do this, because instead of sending output when its ready we're
-    # sending it when new input comes in, which means it's just sitting around. This is a temporary hack until
-    # we figure out a better architecture for awaiting transcoder output and sending it to the client.
+    # Send back any available model output
+    # NOTE: In theory it would make sense remove this from the incoming_audio handler and
+    # handle this in a dedicated thread that checks for output and sends it right away,
+    # but in practice for our limited demo use cases this approach didn't add noticeable
+    # latency, so we're keeping it simple for now.
     events = get_transcoder_output_events(member.transcoder)
     logger.debug(f"[incoming_audio] transcoder output events: {len(events)}")
 

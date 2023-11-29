@@ -6,16 +6,12 @@
   "scripts": {
     "dev": "vite --host --strictPort",
     "build": "vite build",
-    "build:dev_vr": "yarn build --mode deploy_dev_vr",
-    "build:dev_vc": "yarn build --mode deploy_dev_vc",
     "preview": "vite preview",
     "clean:node-modules": "rm -rf node_modules/",
     "ts-check": "tsc --noEmit",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "prettier-check": "cd ../ && yarn run prettier-base --check streaming-react-app",
-    "signal": "concurrently --names \"TS,LINT,PRETTIER\" -c \"bgBlack.bold,bgRed.bold,bgCyan.bold\" \"yarn run ts-check\" \"yarn run lint\" \"yarn run prettier-check\"",
-    "deploy_dev_vr": "aws s3 sync dist/ s3://dev-seamless-vr-www && aws cloudfront create-invalidation --distribution-id E38ZTD4R79FGYF --paths \"/*\"",
-    "deploy_dev_vc": "aws s3 sync dist/ s3://seamless-vc.dev.metademolab.com && aws cloudfront create-invalidation --distribution-id E29D1W2ORBP77G --paths \"/*\""
+    "signal": "concurrently --names \"TS,LINT,PRETTIER\" -c \"bgBlack.bold,bgRed.bold,bgCyan.bold\" \"yarn run ts-check\" \"yarn run lint\" \"yarn run prettier-check\""
   },
   "dependencies": {
     "@emotion/react": "11.11.1",

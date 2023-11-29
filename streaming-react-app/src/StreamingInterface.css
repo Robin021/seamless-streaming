@@ -47,14 +47,8 @@
 
 .translation-text-container-sra {
   background-color: #f8f8f8;
-  /* flex-grow: 1; make it expand to fill the available space */
   padding-top: 12px;
   padding-bottom: 4px;
-}
-
-.translation-text-sra {
-  /* overflow-y: scroll; */
-  /* max-height: 500px; */
 }
 
 .text-chunk-sra {
