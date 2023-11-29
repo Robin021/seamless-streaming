@@ -1,13 +1,3 @@
-export const SUPPORTED_LANGUAGE_CODES = ['en-US', 'es-ES'] as const;
-
-export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGE_CODES)[number];
-
-export type StartStreamingData = {
-  inputLang: SupportedLanguageCode;
-  outputLang: SupportedLanguageCode;
-  outputMode: SupportedOutputMode;
-};
-
 interface ServerTranslationDataBase {
   eos: boolean;
   event: string;
@@ -36,7 +26,6 @@ export type AgentCapabilities = {
   name: string;
   description: string;
   modalities: Array<OutputModalitiesBase>;
-  sourceLangs: Array<string>;
   targetLangs: Array<string>;
   dynamicParams: Array<DynamicParams>;
 };
@@ -74,7 +63,6 @@ export type StartStreamEventConfig = {
   event: 'config';
   rate: number;
   model_name: string;
-  // source_language: SupportedLanguageCode;
   debug: boolean;
   async_processing: boolean;
   model_type: SupportedOutputMode;
@@ -123,7 +111,6 @@ export type TranslationSentences = Array<string>;
 
 export type DynamicConfig = {
   // targetLanguage: a 3-letter string representing the desired output language.
-  // Supported languages are provided by the agent capabilities config
   targetLanguage: string;
 };
 

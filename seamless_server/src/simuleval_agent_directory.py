@@ -10,10 +10,11 @@ logger = logging.getLogger("socketio_server_pubsub")
 # fmt: off
 M4T_P0_LANGS = [
     "eng",
-    "arb", "ben", "cmn", "deu", "fil",
-    "fra", "hin", "ind", "ita", "jpn",
-    "kor", "nld", "por", "rus", "spa",
-    "swh", "tha", "tur", "urd", "vie",
+    "arb", "ben", "cat", "ces", "cmn", "cym", "dan",
+    "deu", "est", "fin", "fra", "hin", "ind", "ita",
+    "jpn", "kor", "mlt", "nld", "pes", "pol", "por",
+    "ron", "rus", "slk", "spa", "swe", "swh", "tel",
+    "tgl", "tha", "tur", "ukr", "urd", "uzn", "vie",
 ]
 # fmt: on
 
@@ -28,7 +29,6 @@ class AgentWithInfo:
         agent,
         name: str,
         modalities: List[str],
-        source_langs: List[str],
         target_langs: List[str],
         # Supported dynamic params are defined in StreamingTypes.ts
         dynamic_params: List[str] = [],
@@ -38,7 +38,6 @@ class AgentWithInfo:
         self.name = name
         self.description = description
         self.modalities = modalities
-        self.source_langs = source_langs
         self.target_langs = target_langs
         self.dynamic_params = dynamic_params
 
@@ -47,7 +46,6 @@ class AgentWithInfo:
             "name": self.name,
             "description": self.description,
             "modalities": self.modalities,
-            "sourceLangs": self.source_langs,
             "targetLangs": self.target_langs,
             "dynamicParams": self.dynamic_params,
         }
@@ -56,8 +54,8 @@ class AgentWithInfo:
     def load_from_json(cls, config: str):
         """
         Takes in JSON array of models to load in, e.g.
-        [{"name": "s2s_m4t_emma-unity2_multidomain_v0.1", "description": "M4T model that supports simultaneous S2S and S2T", "modalities": ["s2t", "s2s"], "sourceLangs": ["arb", "ben", "hin", "ind", "ita", "jpn", "por", "rus", "spa", "swh", "tha", "tur", "urd", "vie"], "targetLangs": ["en"]},
-        {"name": "s2s_m4t_expr-emma_v0.1", "description": "ES-EN expressive model that supports S2S and S2T", "modalities": ["s2t", "s2s"], "sourceLangs": ["arb", "ben", "hin", "ind", "ita", "jpn", "por", "rus", "spa", "swh", "tha", "tur", "urd", "vie"], "targetLangs": ["en"]}]
+        [{"name": "s2s_m4t_emma-unity2_multidomain_v0.1", "description": "M4T model that supports simultaneous S2S and S2T", "modalities": ["s2t", "s2s"], "targetLangs": ["en"]},
+        {"name": "s2s_m4t_expr-emma_v0.1", "description": "ES-EN expressive model that supports S2S and S2T", "modalities": ["s2t", "s2s"], "targetLangs": ["en"]}]
         """
         configs = json.loads(config)
         agents = []
@@ -68,7 +66,6 @@ class AgentWithInfo:
                     agent=agent,
                     name=config["name"],
                     modalities=config["modalities"],
-                    source_langs=config["sourceLangs"],
                     target_langs=config["targetLangs"],
                 )
             )
@@ -77,16 +74,7 @@ class AgentWithInfo:
 
 class SimulevalAgentDirectory:
     # Available models. These are the directories where the models can be found, and also serve as an ID for the model.
-    # s2t:
-    s2t_es_en_agent = "s2t_es-en_tt-waitk_multidomain"
-    s2t_en_es_agent = "s2t_en-es_tt-waitk_multidomain"
-    s2t_es_en_emma_agent = "s2t_es-en_emma_multidomain_v0.3"
-    s2t_en_es_emma_agent = "s2t_en-es_emma_multidomain_v0.3"
-    # s2s:
-    s2s_es_en_agent = "s2s_es-en_tt-waitk-unity2_multidomain"
-    s2s_es_en_emma_agent = "s2s_es-en_emma-unity2_multidomain_v0.2"
-    s2s_m4t_expr_emma_agent = "s2s_m4t_expr-emma_v0.3"
-    s2s_m4t_emma_agent = "s2s_m4t_emma-unity2_multidomain_v0.4"
+    seamless_streaming_agent = "SeamlessStreaming"
 
     def __init__(self):
         self.agents = []
@@ -123,7 +111,7 @@ class SimulevalAgentDirectory:
                 self.add_agent(agent_info)
         else:
             s2s_m4t_expr_agent = self.build_agent_if_available(
-                SimulevalAgentDirectory.s2s_m4t_expr_emma_agent,
+                SimulevalAgentDirectory.seamless_streaming_agent,
                 config_name="vad_s2st_sc_24khz_main.yaml",
             )
 
@@ -131,10 +119,9 @@ class SimulevalAgentDirectory:
                 self.add_agent(
                     AgentWithInfo(
                         agent=s2s_m4t_expr_agent,
-                        name=SimulevalAgentDirectory.s2s_m4t_expr_emma_agent,
+                        name=SimulevalAgentDirectory.seamless_streaming_agent,
                         modalities=["s2t", "s2s"],
-                        source_langs=M4T_P0_LANGS,
-                        target_langs=["eng", "spa", "fra", "deu", "ita", "cmn"],
+                        target_langs=["eng", "arb", "ben", "cat", "ces", "cmn", "cym", "dan", "deu", "est", "fin", "fra", "hin", "ind", "ita", "jpn", "kor", "mlt", "nld", "pes", "pol", "por", "ron", "rus", "slk", "spa", "swe", "swh", "tel", "tgl", "tha", "tur", "ukr", "urd", "uzn", "vie"],
                         dynamic_params=["expressive"],
                         description="multilingual expressive model that supports S2S and S2T",
                     )
