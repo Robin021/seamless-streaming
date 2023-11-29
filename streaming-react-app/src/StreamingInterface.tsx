@@ -59,6 +59,7 @@ import {getURLParams} from './URLParams';
 import debug from './debug';
 import DebugSection from './DebugSection';
 import Switch from '@mui/material/Switch';
+import {Grid} from '@mui/material';
 
 const AUDIO_STREAM_DEFAULTS: {
   [key in SupportedInputSource]: BrowserAudioStreamConfig;
@@ -754,8 +755,7 @@ export default function StreamingInterface() {
       <Box
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore Not sure why it's complaining about complexity here
-        minWidth={'550px'}
-        maxWidth={'660px'}>
+        sx={{width: '100%', maxWidth: '660px', minWidth: '320px'}}>
         <div className="main-container-sra">
           <div className="top-section-sra horizontal-padding-sra">
             <div className="header-container-sra">
@@ -881,74 +881,83 @@ export default function StreamingInterface() {
                       </FormControl>
                     </Box>
 
-                    <Stack direction="row" spacing={3.5}>
-                      <FormControl disabled={streamFixedConfigOptionsDisabled}>
-                        <RadioGroup
-                          aria-labelledby="output-modes-radio-group-label"
-                          value={outputMode}
-                          onChange={(e) =>
-                            setOutputMode(e.target.value as SupportedOutputMode)
-                          }
-                          name="output-modes-radio-buttons-group">
-                          {
-                            // TODO: Use supported modalities from agentCapabilities
-                            SUPPORTED_OUTPUT_MODES.map(({value, label}) => (
-                              <FormControlLabel
-                                key={value}
-                                value={value}
-                                control={<Radio />}
-                                label={label}
-                              />
-                            ))
-                          }
-                        </RadioGroup>
-                      </FormControl>
-
-                      <Stack
-                        direction="column"
-                        spacing={1}
-                        alignItems="flex-start"
-                        sx={{flexGrow: 1}}>
-                        {currentAgent?.dynamicParams?.includes(
-                          'expressive',
-                        ) && (
-                          <FormControlLabel
-                            control={
-                              <Switch
-                                checked={enableExpressive ?? false}
-                                onChange={(
-                                  event: React.ChangeEvent<HTMLInputElement>,
-                                ) => {
-                                  const newValue = event.target.checked;
-                                  setEnableExpressive(newValue);
-                                  onSetDynamicConfig({expressive: newValue});
-                                }}
-                              />
+                    <Grid container>
+                      <Grid item xs={12} sm={4}>
+                        <FormControl
+                          disabled={streamFixedConfigOptionsDisabled}>
+                          <RadioGroup
+                            aria-labelledby="output-modes-radio-group-label"
+                            value={outputMode}
+                            onChange={(e) =>
+                              setOutputMode(
+                                e.target.value as SupportedOutputMode,
+                              )
                             }
-                            label="Expressive"
-                          />
-                        )}
+                            name="output-modes-radio-buttons-group">
+                            {
+                              // TODO: Use supported modalities from agentCapabilities
+                              SUPPORTED_OUTPUT_MODES.map(({value, label}) => (
+                                <FormControlLabel
+                                  key={value}
+                                  value={value}
+                                  control={<Radio />}
+                                  label={label}
+                                />
+                              ))
+                            }
+                          </RadioGroup>
+                        </FormControl>
+                      </Grid>
 
-                        {isListener && (
-                          <Box
-                            sx={{
-                              flexGrow: 1,
-                              paddingX: 1.5,
-                              paddingY: 1.5,
-                              width: '100%',
-                            }}>
-                            {volumeSliderNode}
-                          </Box>
-                        )}
-                      </Stack>
-                    </Stack>
+                      <Grid item xs={12} sm={8}>
+                        <Stack
+                          direction="column"
+                          spacing={1}
+                          alignItems="flex-start"
+                          sx={{flexGrow: 1}}>
+                          {currentAgent?.dynamicParams?.includes(
+                            'expressive',
+                          ) && (
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={enableExpressive ?? false}
+                                  onChange={(
+                                    event: React.ChangeEvent<HTMLInputElement>,
+                                  ) => {
+                                    const newValue = event.target.checked;
+                                    setEnableExpressive(newValue);
+                                    onSetDynamicConfig({
+                                      expressive: newValue,
+                                    });
+                                  }}
+                                />
+                              }
+                              label="Expressive"
+                            />
+                          )}
+
+                          {isListener && (
+                            <Box
+                              sx={{
+                                flexGrow: 1,
+                                paddingX: 1.5,
+                                paddingY: 1.5,
+                                width: '100%',
+                              }}>
+                              {volumeSliderNode}
+                            </Box>
+                          )}
+                        </Stack>
+                      </Grid>
+                    </Grid>
                   </Stack>
 
                   <Stack
                     direction="row"
                     spacing={2}
                     justifyContent="space-between">
-                    <div>
+                    <Box sx={{flex: 1}}>
                       <FormControl disabled={streamFixedConfigOptionsDisabled}>
                         <FormLabel id="input-source-radio-group-label">
                           Input Source
@@ -972,8 +981,8 @@ export default function StreamingInterface() {
                           ))}
                         </RadioGroup>
                       </FormControl>
-                    </div>
-                    <div>
+                    </Box>
+                    <Box sx={{flex: 1}}>
                       <FormControl disabled={streamFixedConfigOptionsDisabled}>
                         <FormLabel>Options</FormLabel>
                         <FormControlLabel
@@ -1022,7 +1031,7 @@ export default function StreamingInterface() {
                           label="Server Debug Flag"
                         />
                       </FormControl>
-                    </div>
+                    </Box>
                   </Stack>
 
                   <Stack direction="row" spacing={2}>
