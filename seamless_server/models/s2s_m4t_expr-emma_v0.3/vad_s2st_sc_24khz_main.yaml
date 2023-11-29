@@ -1,4 +1,4 @@
-agent_class: seamless_communication.streaming.agents.mma_m4t_s2st.SeamlessS2STJointVADAgent
+agent_class: seamless_communication.streaming.agents.seamless_s2st.SeamlessS2STJointVADAgent
 # checkpoint: checkpoint_best.pt
 monotonic_decoder_model_name: seamless_streaming_monotonic_decoder
 unity_model_name: seamless_streaming_unity
