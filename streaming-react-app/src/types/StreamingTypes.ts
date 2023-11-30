@@ -1,3 +1,13 @@
+export const SUPPORTED_LANGUAGE_CODES = ['en-US', 'es-ES'] as const;
+
+export type SupportedLanguageCode = (typeof SUPPORTED_LANGUAGE_CODES)[number];
+
+export type StartStreamingData = {
+  inputLang: SupportedLanguageCode;
+  outputLang: SupportedLanguageCode;
+  outputMode: SupportedOutputMode;
+};
+
 interface ServerTranslationDataBase {
   eos: boolean;
   event: string;
@@ -26,6 +36,7 @@ export type AgentCapabilities = {
   name: string;
   description: string;
   modalities: Array<OutputModalitiesBase>;
+  sourceLangs: Array<string>;
   targetLangs: Array<string>;
   dynamicParams: Array<DynamicParams>;
 };
@@ -38,10 +49,10 @@ export const SUPPORTED_OUTPUT_MODES: Array<{
   value: (typeof SUPPORTED_OUTPUT_MODE_VALUES)[number];
   label: string;
 }> = [
-    { value: 's2s&t', label: 'Text & Speech' },
-    { value: 's2t', label: 'Text' },
-    { value: 's2s', label: 'Speech' },
-  ];
+  {value: 's2s&t', label: 'Text & Speech'},
+  {value: 's2t', label: 'Text'},
+  {value: 's2s', label: 'Speech'},
+];
 
 export const SUPPORTED_INPUT_SOURCE_VALUES = [
   'userMedia',
@@ -55,14 +66,15 @@ export const SUPPORTED_INPUT_SOURCES: Array<{
   value: SupportedInputSource;
   label: string;
 }> = [
-    { value: 'userMedia', label: 'Microphone' },
-    { value: 'displayMedia', label: 'Browser Tab' },
-  ];
+  {value: 'userMedia', label: 'Microphone'},
+  {value: 'displayMedia', label: 'Browser Tab'},
+];
 
 export type StartStreamEventConfig = {
   event: 'config';
   rate: number;
   model_name: string;
+  // source_language: SupportedLanguageCode;
   debug: boolean;
   async_processing: boolean;
   model_type: SupportedOutputMode;
@@ -70,8 +82,8 @@ export type StartStreamEventConfig = {
 };
 
 export interface BrowserAudioStreamConfig {
-  noiseSuppression: boolean;
   echoCancellation: boolean;
+  noiseSuppression: boolean;
 }
 
 export interface ServerStateItem {
@@ -88,7 +100,7 @@ export type ServerLockObject = {
 export type ServerState = ServerStateItem & {
   agentsCapabilities: Array<AgentCapabilities>;
   statusByRoom: {
-    [key: string]: { activeConnections: number; activeTranscoders: number };
+    [key: string]: {activeConnections: number; activeTranscoders: number};
   };
   totalActiveConnections: number;
   totalActiveTranscoders: number;
@@ -111,7 +123,10 @@ export type TranslationSentences = Array<string>;
 
 export type DynamicConfig = {
   // targetLanguage: a 3-letter string representing the desired output language.
+  // Supported languages are provided by the agent capabilities config
   targetLanguage: string;
+
+  expressive: boolean | null;
 };
 
 export type PartialDynamicConfig = Partial<DynamicConfig>;

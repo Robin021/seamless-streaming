@@ -58,6 +58,7 @@ import {CURSOR_BLINK_INTERVAL_MS} from './cursorBlinkInterval';
 import {getURLParams} from './URLParams';
 import debug from './debug';
 import DebugSection from './DebugSection';
+import Switch from '@mui/material/Switch';
 import {Grid} from '@mui/material';
 
 const AUDIO_STREAM_DEFAULTS: {
@@ -171,6 +172,9 @@ export default function StreamingInterface() {
 
   // Dynamic Params:
   const [targetLang, setTargetLang] = useState<string | null>(null);
+  const [enableExpressive, setEnableExpressive] = useState<boolean | null>(
+    null,
+  );
 
   const [serverDebugFlag, setServerDebugFlag] = useState<boolean>(
     debugParam ?? false,
@@ -252,6 +256,7 @@ export default function StreamingInterface() {
       setAgent((prevAgent) => {
         if (prevAgent?.name !== newAgent?.name) {
           setTargetLang(newAgent?.targetLangs[0] ?? null);
+          setEnableExpressive(null);
         }
         return newAgent;
       });
@@ -427,6 +432,7 @@ export default function StreamingInterface() {
       // available before actually configuring and starting the stream
       const fullDynamicConfig: DynamicConfig = {
         targetLanguage: targetLang,
+        expressive: enableExpressive,
       };
 
       await onSetDynamicConfig(fullDynamicConfig);
@@ -752,11 +758,6 @@ export default function StreamingInterface() {
                   Seamless Translation
                 </Typography>
               </div>
-              <div>
-                <Typography variant="body2" sx={{color: '#65676B'}}>
-                  Welcome! Join a room as speaker or listener (or both), and share the room code to invite listeners.
-                </Typography>
-              </div>
             </div>
 
             <Stack spacing="22px" direction="column">
@@ -830,6 +831,11 @@ export default function StreamingInterface() {
                       </Select>
                     </FormControl>
 
+                    <Typography variant="body2">
+                      {`Supported Source Languages: ${
+                        currentAgent?.sourceLangs.join(', ') ?? 'None'
+                      }`}
+                    </Typography>
                   </Stack>
 
                   <Stack spacing={0.5}>
@@ -895,6 +901,28 @@ export default function StreamingInterface() {
                           spacing={1}
                           alignItems="flex-start"
                           sx={{flexGrow: 1}}>
+                          {currentAgent?.dynamicParams?.includes(
+                            'expressive',
+                          ) && (
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={enableExpressive ?? false}
+                                  onChange={(
+                                    event: React.ChangeEvent<HTMLInputElement>,
+                                  ) => {
+                                    const newValue = event.target.checked;
+                                    setEnableExpressive(newValue);
+                                    onSetDynamicConfig({
+                                      expressive: newValue,
+                                    });
+                                  }}
+                                />
+                              }
+                              label="Expressive"
+                            />
+                          )}
+
                           {isListener && (
                             <Box
                               sx={{
@@ -910,13 +938,6 @@ export default function StreamingInterface() {
                       </Grid>
                     </Grid>
                   </Stack>
-
-                  <Typography variant="body2">
-                    Note: we don't recommend echo cancellation, as it may distort 
-                    the input audio (dropping words/sentences) if there is output 
-                    audio playing. Instead, you should use headphones if you'd like 
-                    to listen to the output audio while speaking.
-                  </Typography>
 
                   <Stack
                     direction="row"
@@ -967,7 +988,7 @@ export default function StreamingInterface() {
                           }
                           label="Noise Suppression (Browser)"
                         />
-                                                <FormControlLabel
+                        <FormControlLabel
                           control={
                             <Checkbox
                               checked={
