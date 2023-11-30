@@ -73,7 +73,7 @@ WORKDIR $HOME/app/seamless_server
 RUN --mount=type=secret,id=HF_TOKEN,mode=0444,required=true \ 
     huggingface-cli login --token $(cat /run/secrets/HF_TOKEN) && \
     huggingface-cli download meta-private/SeamlessStreaming seamless_streaming_unity.pt spm_char_lang38_tc.model seamless_streaming_monotonic_decoder.pt --local-dir ./models/ && \
-    huggingface-cli download meta-private/SeamlessExpressive pretssel_melhifigan_wm-final.pt  --local-dir ./models/ 
+    huggingface-cli download meta-private/SeamlessStreaming vocoder_v2.pt  --local-dir ./models/ 
 USER root
 RUN mkdir -p /large_experiments/seamless/ust/krs/fairseq2_checkpoints/ && \
     mkdir -p /large_experiments/seamless/workstream/expressivity/oss/checkpoints/ && \
@@ -82,7 +82,7 @@ RUN mkdir -p /large_experiments/seamless/ust/krs/fairseq2_checkpoints/ && \
     chown -R user:user /checkpoint/ && \
     ln -s $(readlink -f models/seamless_streaming_unity.pt) /large_experiments/seamless/ust/krs/fairseq2_checkpoints/seamless_streaming_unity.pt && \
     ln -s $(readlink -f models/seamless_streaming_monotonic_decoder.pt) /large_experiments/seamless/ust/krs/fairseq2_checkpoints/seamless_streaming_monotonic_decoder.pt && \
-    ln -s $(readlink -f models/pretssel_melhifigan_wm-final.pt) /large_experiments/seamless/workstream/expressivity/oss/checkpoints/pretssel_melhifigan_wm-final.pt && \
+    ln -s $(readlink -f models/vocoder_v2.pt) /large_experiments/seamless/ust/krs/fairseq2_checkpoints/vocoder_v2.pt && \
     ln -s $(readlink -f models/spm_char_lang38_tc.model) /checkpoint/krs/unity2/
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/libsox.so.3 /usr/lib/x86_64-linux-gnu/libsox.so
