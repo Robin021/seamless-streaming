@@ -152,7 +152,6 @@ export default function StreamingInterface() {
     useState<StreamingStatus>('stopped');
 
   const isStreamConfiguredRef = useRef<boolean>(false);
-
   const [hasMaxSpeakers, setHasMaxSpeakers] = useState<boolean>(false);
 
   const [outputMode, setOutputMode] = useState<SupportedOutputMode>('s2s&t');
@@ -167,6 +166,9 @@ export default function StreamingInterface() {
 
   // Dynamic Params:
   const [targetLang, setTargetLang] = useState<string | null>(null);
+  const [enableExpressive, setEnableExpressive] = useState<boolean | null>(
+    null,
+  );
 
   const [serverDebugFlag, setServerDebugFlag] = useState<boolean>(
     debugParam ?? false,
@@ -248,6 +250,7 @@ export default function StreamingInterface() {
       setAgent((prevAgent) => {
         if (prevAgent?.name !== newAgent?.name) {
           setTargetLang(newAgent?.targetLangs[0] ?? null);
+          setEnableExpressive(null);
         }
         return newAgent;
       });
@@ -424,6 +427,7 @@ export default function StreamingInterface() {
       // available before actually configuring and starting the stream
       const fullDynamicConfig: DynamicConfig = {
         targetLanguage: targetLang,
+        expressive: enableExpressive,
       };
 
       await onSetDynamicConfig(fullDynamicConfig);
@@ -753,7 +757,7 @@ export default function StreamingInterface() {
             <div className="header-container-sra">
               <div>
                 <Typography variant="body2" sx={{color: '#65676B'}}>
-                  Welcome! This space is locked to one speaker at a time, please duplicate the space <a target="_blank" rel="noopener noreferrer" href="https://huggingface.co/spaces/facebook/seamless-streaming?duplicate=true">here</a>. Unset the environment variable `LOCK_SERVER_COMPLETELY` and `ONE_USER_ONLY`.
+                  Welcome! This space is locked to one speaker at a time, please duplicate the space <a target="_blank" rel="noopener noreferrer" href="https://huggingface.co/spaces/facebook/seamless-streaming?duplicate=true">here</a>. Unset the environment variable `LOCK_SERVER_COMPLETELY`.
                   <br/>
                   In your duplicated space, join a room as speaker or listener (or both), and share the
                   room code to invite listeners.
@@ -909,6 +913,28 @@ export default function StreamingInterface() {
                           spacing={1}
                           alignItems="flex-start"
                           sx={{flexGrow: 1}}>
+                          {currentAgent?.dynamicParams?.includes(
+                            'expressive',
+                          ) && (
+                            <FormControlLabel
+                              control={
+                                <Switch
+                                  checked={enableExpressive ?? false}
+                                  onChange={(
+                                    event: React.ChangeEvent<HTMLInputElement>,
+                                  ) => {
+                                    const newValue = event.target.checked;
+                                    setEnableExpressive(newValue);
+                                    onSetDynamicConfig({
+                                      expressive: newValue,
+                                    });
+                                  }}
+                                />
+                              }
+                              label="Expressive"
+                            />
+                          )}
+
                           {isListener && (
                             <Box
                               sx={{
@@ -1090,8 +1116,6 @@ export default function StreamingInterface() {
                       </Alert>
                     </div>
                   )}
-
-
                   {serverState != null && hasMaxSpeakers && (
                     <div>
                       <Alert severity="error">
