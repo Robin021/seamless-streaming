@@ -127,7 +127,7 @@ MAX_SPEAKERS = os.environ.get("MAX_SPEAKERS")
 
 if os.environ.get("LOCK_SERVER_COMPLETELY", "0") == "1":
     logger.info("LOCK_SERVER_COMPLETELY is set. Server will be locked on startup.")
-if MAX_SPEAKERS is not None:
+if MAX_SPEAKERS is not None and int(MAX_SPEAKERS):
     logger.info(f"MAX_SPEAKERS is set to: {MAX_SPEAKERS}")
 dummy_server_lock_member_object = Member(
     client_id="seamless_user", session_id="dummy", name="Seamless User"
