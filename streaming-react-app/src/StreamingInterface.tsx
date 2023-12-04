@@ -153,6 +153,8 @@ export default function StreamingInterface() {
 
   const isStreamConfiguredRef = useRef<boolean>(false);
 
+  const [hasMaxSpeakers, setHasMaxSpeakers] = useState<boolean>(false);
+
   const [outputMode, setOutputMode] = useState<SupportedOutputMode>('s2s&t');
   const [inputSource, setInputSource] =
     useState<SupportedInputSource>('userMedia');
@@ -165,9 +167,6 @@ export default function StreamingInterface() {
 
   // Dynamic Params:
   const [targetLang, setTargetLang] = useState<string | null>(null);
-  const [enableExpressive, setEnableExpressive] = useState<boolean | null>(
-    null,
-  );
 
   const [serverDebugFlag, setServerDebugFlag] = useState<boolean>(
     debugParam ?? false,
@@ -249,7 +248,6 @@ export default function StreamingInterface() {
       setAgent((prevAgent) => {
         if (prevAgent?.name !== newAgent?.name) {
           setTargetLang(newAgent?.targetLangs[0] ?? null);
-          setEnableExpressive(null);
         }
         return newAgent;
       });
@@ -308,6 +306,7 @@ export default function StreamingInterface() {
       console.log('[configureStreamAsync] sending config', config);
 
       socket.emit('configure_stream', config, (statusObject) => {
+        setHasMaxSpeakers(statusObject.message === 'max_speakers')
         if (statusObject.status === 'ok') {
           isStreamConfiguredRef.current = true;
           console.debug(
@@ -425,7 +424,6 @@ export default function StreamingInterface() {
       // available before actually configuring and starting the stream
       const fullDynamicConfig: DynamicConfig = {
         targetLanguage: targetLang,
-        expressive: enableExpressive,
       };
 
       await onSetDynamicConfig(fullDynamicConfig);
@@ -755,16 +753,16 @@ export default function StreamingInterface() {
             <div className="header-container-sra">
               <div>
                 <Typography variant="body2" sx={{color: '#65676B'}}>
-                  Welcome! This space is locked, please duplicate the space <a target="_blank" rel="noopener noreferrer" href="https://huggingface.co/spaces/facebook/seamless-streaming?duplicate=true">here</a>. Unset the environment variable `LOCK_SERVER_COMPLETELY`.
+                  Welcome! This space is locked to one speaker at a time, please duplicate the space <a target="_blank" rel="noopener noreferrer" href="https://huggingface.co/spaces/facebook/seamless-streaming?duplicate=true">here</a>. Unset the environment variable `LOCK_SERVER_COMPLETELY` and `ONE_USER_ONLY`.
                   <br/>
-                  In your duplicated space, join a room as speaker or listener (or both), and share the 
+                  In your duplicated space, join a room as speaker or listener (or both), and share the
                   room code to invite listeners.
                   <br/>
                   Check out the seamless_communication <a target="_blank" rel="noopener noreferrer" href="https://github.com/facebookresearch/seamless_communication/tree/main">README</a> for more information.
                   <br/>
                   SeamlessStreaming model is a research model and is not released
-                  for production deployment. The streaming quality is closely 
-                  related to proper VAD segmentation. It works best if you pause 
+                  for production deployment. The streaming quality is closely
+                  related to proper VAD segmentation. It works best if you pause
                   every couple of sentences, or you may wish adjust the VAD threshold
                   in the model config. The real-time performance will degrade
                   if you try streaming multiple speakers at the same time.
@@ -911,28 +909,6 @@ export default function StreamingInterface() {
                           spacing={1}
                           alignItems="flex-start"
                           sx={{flexGrow: 1}}>
-                          {currentAgent?.dynamicParams?.includes(
-                            'expressive',
-                          ) && (
-                            <FormControlLabel
-                              control={
-                                <Switch
-                                  checked={enableExpressive ?? false}
-                                  onChange={(
-                                    event: React.ChangeEvent<HTMLInputElement>,
-                                  ) => {
-                                    const newValue = event.target.checked;
-                                    setEnableExpressive(newValue);
-                                    onSetDynamicConfig({
-                                      expressive: newValue,
-                                    });
-                                  }}
-                                />
-                              }
-                              label="Expressive"
-                            />
-                          )}
-
                           {isListener && (
                             <Box
                               sx={{
@@ -1115,6 +1091,14 @@ export default function StreamingInterface() {
                     </div>
                   )}
 
+
+                  {serverState != null && hasMaxSpeakers && (
+                    <div>
+                      <Alert severity="error">
+                        {`Maximum number of speakers reached. Please try again at a later time.`}
+                      </Alert>
+                    </div>
+                  )}
                   {serverState != null &&
                     serverState.totalActiveTranscoders >=
                       TOTAL_ACTIVE_TRANSCODER_WARNING_THRESHOLD && (
