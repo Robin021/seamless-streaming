@@ -123,12 +123,12 @@ class ServerLock(TypedDict):
     client_id: str
     member_object: Member
 
-MAX_SPEAKERS = os.environ.get("MAX_SPEAKERS")
+SINGLE_USER = os.environ.get("SINGLE_USER")
 
 if os.environ.get("LOCK_SERVER_COMPLETELY", "0") == "1":
     logger.info("LOCK_SERVER_COMPLETELY is set. Server will be locked on startup.")
-if MAX_SPEAKERS is not None and int(MAX_SPEAKERS):
-    logger.info(f"MAX_SPEAKERS is set to: {MAX_SPEAKERS}")
+if SINGLE_USER == "1":
+    logger.info(f"SINGLE_USER mode is set. Server will only allow one speaker or listener at a time.")
 dummy_server_lock_member_object = Member(
     client_id="seamless_user", session_id="dummy", name="Seamless User"
 )
@@ -428,6 +428,7 @@ async def join_room(sid, client_id, room_id_from_client, config_dict):
     }
     logger.info(f"[event: join_room] {args}")
     session_data = await get_session_data(sid)
+
     logger.info(f"session_data: {session_data}")
 
     room_id = room_id_from_client
@@ -459,6 +460,13 @@ async def join_room(sid, client_id, room_id_from_client, config_dict):
             session_id=sid,
             name=name,
         )
+        allow_user = check_and_lock_single_user(client_id, member)
+        if not allow_user:
+            logger.error(
+                f"In SINGLE_USER mode we only allow one user at a time. Ignoring request to configure stream from client {client_id}."
+            )
+            return {"status": "error", "message": "max_users"}
+
         logger.info(f"Created a new Member object: {member}")
         logger.info(f"Adding {member} to room {room_id}")
         room.members[client_id] = member
@@ -500,32 +508,22 @@ async def join_room(sid, client_id, room_id_from_client, config_dict):
             speaker_id for speaker_id in room.speakers if speaker_id != client_id
         ]
 
-    # If we currently own the server lock and are updating roles and we no longer have server lock specified, release it
-    if (
-        server_lock is not None
-        and server_lock["client_id"] == client_id
-        and config_dict.get("lockServerName") is None
-    ):
-        logger.info(f"[join_room] Releasing server lock: {pformat(server_lock)}")
-        server_lock = None
-
     # Only speakers should be able to lock the server
     if config_dict.get("lockServerName") is not None and "speaker" in config_dict.get(
         "roles", {}
     ):
         # If something goes wrong and the server gets stuck in a locked state the client can
         # force the server to remove the lock by passing the special name ESCAPE_HATCH_SERVER_LOCK_RELEASE_NAME
-        if (
-            server_lock is not None
-            and config_dict.get("lockServerName")
-            == ESCAPE_HATCH_SERVER_LOCK_RELEASE_NAME
-            # If we are locking the server completely we don't want someone to be able to unlock it
-            and not os.environ.get("LOCK_SERVER_COMPLETELY", "0") == "1"
-        ):
-            server_lock = None
-            logger.info(
-                f"🔓 Server lock has been reset by {client_id} using the escape hatch name {ESCAPE_HATCH_SERVER_LOCK_RELEASE_NAME}"
-            )
+        # TEMP: remove escape hatch for demo
+        # if (
+        #     server_lock is not None
+        #     and config_dict.get("lockServerName")
+        #     == ESCAPE_HATCH_SERVER_LOCK_RELEASE_NAME
+        # ):
+        #     server_lock = None
+        #     logger.info(
+        #         f"🔓 Server lock has been reset by {client_id} using the escape hatch name {ESCAPE_HATCH_SERVER_LOCK_RELEASE_NAME}"
+        #     )
 
         # If the server is not locked, set a lock. If it's already locked to this client, update the lock object
         if server_lock is None or server_lock.get("client_id") == client_id:
@@ -559,12 +557,21 @@ async def join_room(sid, client_id, room_id_from_client, config_dict):
 
     return {"roomsJoined": sio.rooms(sid), "roomID": room_id}
 
-def allow_speaker(room, client_id):
-    if MAX_SPEAKERS is not None and client_id in room.speakers:
-        room_statuses = {room_id: room.get_room_status_dict() for room_id, room in rooms.items()}
-        speakers = sum(room_status["activeTranscoders"] for room_status in room_statuses.values())
-        return speakers < int(MAX_SPEAKERS)
-    return True
+def check_and_lock_single_user(client_id, member):
+    global server_lock
+
+    if SINGLE_USER is None:
+        return True
+
+    if server_lock is None:
+        server_lock = {
+            "name": "single_user",
+            "client_id": client_id,
+            "member_object": member,
+        }
+        return True
+
+    return server_lock["client_id"] == client_id
 
 # TODO: Add code to prevent more than one speaker from connecting/streaming at a time
 @sio.event

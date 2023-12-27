@@ -27,12 +27,14 @@ type Props = {
   serverState: ServerState | null;
   onJoinRoomOrUpdateRoles?: () => void;
   streamingStatus: StreamingStatus;
+  setHasMaxUsers: (hasMaxUsers: boolean) => void;
 };
 
 export default function RoomConfig({
   roomState,
   serverState,
   onJoinRoomOrUpdateRoles,
+  setHasMaxUsers,
   streamingStatus,
 }: Props) {
   const {socket, clientID} = useSocket();
@@ -90,6 +92,13 @@ export default function RoomConfig({
         configObject,
         (result) => {
           console.log('join_room result:', result);
+          if (result.message === 'max_users') {
+            setHasMaxUsers(true);
+            setJoinInProgress(false);
+            return;
+          } else {
+            setHasMaxUsers(false);
+          }
           if (createNewRoom) {
             setRoomID(result.roomID);
           }

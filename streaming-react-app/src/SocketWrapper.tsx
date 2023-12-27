@@ -11,9 +11,10 @@ import {getURLParams} from './URLParams';
 
 // The time to wait before showing a "disconnected" screen upon initial app load
 const INITIAL_DISCONNECT_SCREEN_DELAY = 2000;
-const SERVER_URL_DEFAULT = `${window.location.protocol === "https:" ? "wss" : "ws"
-                    }://${window.location.host}`;
-                    
+// const SERVER_URL_DEFAULT = `${window.location.protocol === "https:" ? "wss" : "ws"
+//                     }://${window.location.host}`;
+const SERVER_URL_DEFAULT = 'http://localhost:8000/'
+
 export default function SocketWrapper({children}) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState<boolean | null>(null);

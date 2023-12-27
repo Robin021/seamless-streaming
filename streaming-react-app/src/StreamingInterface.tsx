@@ -152,7 +152,7 @@ export default function StreamingInterface() {
     useState<StreamingStatus>('stopped');
 
   const isStreamConfiguredRef = useRef<boolean>(false);
-  const [hasMaxSpeakers, setHasMaxSpeakers] = useState<boolean>(false);
+  const [hasMaxUsers, setHasMaxUsers] = useState<boolean>(false);
 
   const [outputMode, setOutputMode] = useState<SupportedOutputMode>('s2s&t');
   const [inputSource, setInputSource] =
@@ -309,7 +309,6 @@ export default function StreamingInterface() {
       console.log('[configureStreamAsync] sending config', config);
 
       socket.emit('configure_stream', config, (statusObject) => {
-        setHasMaxSpeakers(statusObject.message === 'max_speakers')
         if (statusObject.status === 'ok') {
           isStreamConfiguredRef.current = true;
           console.debug(
@@ -757,20 +756,20 @@ export default function StreamingInterface() {
             <div className="header-container-sra">
               <div>
                 <Typography variant="body2" sx={{color: '#65676B'}}>
-                  Welcome! This space is limited to one speaker at a time. 
-                  If using the live HF space, sharing room code to listeners on another 
-                  IP address may not work because it's running on different replicas. 
+                  Welcome! This space is limited to one user at a time.
+                  If using the live HF space, sharing room code to listeners on another
+                  IP address may not work because it's running on different replicas.
                   Use headphones if you are both speaker and listener to prevent feedback.
                   <br/>
-                  If max speakers reached, please duplicate the space <a target="_blank" rel="noopener noreferrer" href="https://huggingface.co/spaces/facebook/seamless-streaming?duplicate=true">here</a>. 
-                  In your duplicated space, join a room as speaker or listener (or both), 
+                  If max users reached, please duplicate the space <a target="_blank" rel="noopener noreferrer" href="https://huggingface.co/spaces/facebook/seamless-streaming?duplicate=true">here</a>.
+                  In your duplicated space, join a room as speaker or listener (or both),
                   and share the room code to invite listeners.
                   <br/>
                   Check out the seamless_communication <a target="_blank" rel="noopener noreferrer" href="https://github.com/facebookresearch/seamless_communication/tree/main">README</a> for more information.
                   <br/>
                   SeamlessStreaming model is a research model and is not released
-                  for production deployment. It is important to use a microphone with 
-                  noise cancellation (for e.g. a smartphone), otherwise you may see model hallucination on noises. 
+                  for production deployment. It is important to use a microphone with
+                  noise cancellation (for e.g. a smartphone), otherwise you may see model hallucination on noises.
                   It works best if you pause every couple of sentences, or you may wish adjust the VAD threshold
                   in the model config. The real-time performance will degrade
                   if you try streaming multiple speakers at the same time.
@@ -783,6 +782,7 @@ export default function StreamingInterface() {
                   roomState={roomState}
                   serverState={serverState}
                   streamingStatus={streamingStatus}
+                  setHasMaxUsers={setHasMaxUsers}
                   onJoinRoomOrUpdateRoles={() => {
                     // If the user has switched from speaker to listener we need to tell the
                     // player to play eagerly, since currently the listener doesn't have any stop/start controls
@@ -955,6 +955,13 @@ export default function StreamingInterface() {
                     </Grid>
                   </Stack>
 
+                  <Typography variant="body2" sx={{color: '#65676B'}}>
+                    Note: we don't recommend echo cancellation, as it may distort
+                    the input audio (dropping words/sentences) if there is output
+                    audio playing. Instead, you should use headphones if you'd like
+                    to listen to the output audio while speaking.
+                  </Typography>
+
                   <Stack
                     direction="row"
                     spacing={2}
@@ -1120,13 +1127,6 @@ export default function StreamingInterface() {
                       </Alert>
                     </div>
                   )}
-                  {serverState != null && hasMaxSpeakers && (
-                    <div>
-                      <Alert severity="error">
-                        {`Maximum number of speakers reached. Please try again at a later time.`}
-                      </Alert>
-                    </div>
-                  )}
                   {serverState != null &&
                     serverState.totalActiveTranscoders >=
                       TOTAL_ACTIVE_TRANSCODER_WARNING_THRESHOLD && (
@@ -1156,6 +1156,13 @@ export default function StreamingInterface() {
             )}
           </div>
 
+          {hasMaxUsers && (
+            <div>
+              <Alert severity="error">
+                {`Maximum number of users reached. Please try again at a later time.`}
+              </Alert>
+            </div>
+          )}
           {debugParam && roomID != null && <DebugSection />}
 
           <div className="translation-text-container-sra horizontal-padding-sra">
