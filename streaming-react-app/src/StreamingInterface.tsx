@@ -955,13 +955,6 @@ export default function StreamingInterface() {
                     </Grid>
                   </Stack>
 
-                  <Typography variant="body2" sx={{color: '#65676B'}}>
-                    Note: we don't recommend echo cancellation, as it may distort
-                    the input audio (dropping words/sentences) if there is output
-                    audio playing. Instead, you should use headphones if you'd like
-                    to listen to the output audio while speaking.
-                  </Typography>
-
                   <Stack
                     direction="row"
                     spacing={2}
