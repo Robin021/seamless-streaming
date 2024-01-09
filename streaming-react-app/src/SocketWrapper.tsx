@@ -13,7 +13,7 @@ import {getURLParams} from './URLParams';
 const INITIAL_DISCONNECT_SCREEN_DELAY = 2000;
 const SERVER_URL_DEFAULT = `${window.location.protocol === "https:" ? "wss" : "ws"
                     }://${window.location.host}`;
-
+                    
 export default function SocketWrapper({children}) {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [connected, setConnected] = useState<boolean | null>(null);
