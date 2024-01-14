@@ -27,7 +27,9 @@ You can simply duplicate the space to run it.
 
 If running for the first time, create conda environment and install the desired torch version. Then install the rest of the requirements:
 ```
+git clone https://huggingface.co/spaces/facebook/seamless-streaming
 cd seamless_server
+conda config --append channels conda-forge
 conda create --yes --name smlss_server python=3.8 libsndfile==1.0.31
 conda activate smlss_server
 conda install --yes pytorch torchvision torchaudio pytorch-cuda=11.8 -c pytorch -c nvidia
