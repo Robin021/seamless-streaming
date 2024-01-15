@@ -558,6 +558,13 @@ async def join_room(sid, client_id, room_id_from_client, config_dict):
 
     return {"roomsJoined": sio.rooms(sid), "roomID": room_id}
 
+def allow_speaker(room, client_id):
+    if MAX_SPEAKERS is not None and client_id in room.speakers:
+        room_statuses = {room_id: room.get_room_status_dict() for room_id, room in rooms.items()}
+        speakers = sum(room_status["activeTranscoders"] for room_status in room_statuses.values())
+        return speakers < int(MAX_SPEAKERS)
+    return True
+
 def check_and_lock_single_user(client_id, member):
     global server_lock
 
