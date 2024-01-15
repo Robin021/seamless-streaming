@@ -593,11 +593,11 @@ async def configure_stream(sid, config):
         )
         return {"status": "error", "message": "member_or_room_is_none"}
 
-    if not allow_speaker(room, client_id):
-        logger.error(
-            f"In MAX_SPEAKERS mode we only allow one speaker at a time. Ignoring request to configure stream from client {client_id}."
-        )
-        return {"status": "error", "message": "max_speakers"}
+    # if not allow_speaker(room, client_id):
+    #     logger.error(
+    #         f"In MAX_SPEAKERS mode we only allow one speaker at a time. Ignoring request to configure stream from client {client_id}."
+    #     )
+    #     return {"status": "error", "message": "max_speakers"}
 
     # If there is a server lock WITH an active transcoder session, prevent other users from configuring and starting a stream
     # If the server lock client does NOT have an active transcoder session allow this to proceed, knowing that
